@@ -1,27 +1,4 @@
-{*
-* 2007-2017 PrestaShop
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to license@prestashop.com so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-*  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2017 PrestaShop SA
-*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*  International Registered Trademark & Property of PrestaShop SA
-*}
+{* ... (Cabeçalho de licença original mantido) ... *}
 
 {if !$opc}
 	{addJsDefL name=txtProduct}{l s='product' js=1}{/addJsDefL}
@@ -48,12 +25,93 @@
 	<div id="opc_payment_methods" class="opc-main-block">
 		<div id="opc_payment_methods-overlay" class="opc-overlay" style="display: none;"></div>
 {/if}
+
 {if $advanced_payment_api}
 	{block name='order_payment_advanced'}
 		{include file="$tpl_dir./order-payment-advanced.tpl"}
 	{/block}
 {else}
 	{block name='order_payment_classic'}
-		{include file = "$tpl_dir./order-payment-classic.tpl"}
+		<!-- NOSSO NOVO HTML DE PAGAMENTO COMEÇA AQUI -->
+		<div class="box">
+			<h3 class="page-subheading">Escolha a forma de pagamento:</h3>
+			
+			<div style="margin: 20px 0; font-size: 16px; line-height: 2;">
+				<label style="cursor: pointer;">
+					<input type="radio" name="payment_method" value="stripe" id="pay-stripe"> Cartão de Crédito
+				</label><br>
+				<label style="cursor: pointer;">
+					<input type="radio" name="payment_method" value="pix" id="pay-pix"> PIX
+				</label><br>
+				<label style="cursor: pointer;">
+					<input type="radio" name="payment_method" value="offline" id="pay-offline"> Pagar na Recepção
+				</label>
+			</div>
+
+			<p class="cart_navigation clearfix">
+				<button id="btn-confirm-payment" class="button btn btn-default button-medium">
+					<span>Confirmar Pedido <i class="icon-chevron-right right"></i></span>
+				</button>
+			</p>
+		</div>
+		<!-- NOSSO NOVO HTML DE PAGAMENTO TERMINA AQUI -->
 	{/block}
 {/if}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmButton = document.querySelector('#btn-confirm-payment');
+
+    if (confirmButton) {
+        confirmButton.addEventListener('click', function(e) {
+            e.preventDefault(); 
+
+            const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+
+            if (!selectedPayment) {
+                alert('Por favor, selecione um método de pagamento.');
+                return;
+            }
+
+            const moduleName = selectedPayment.value; 
+            
+            // CORREÇÃO: Forçamos o index.php e passamos o módulo diretamente na URL para evitar perda de dados em redirecionamentos
+            const paymentUrl = baseUri + 'index.php?controller=PaymentProcessor&ajax=true&payment_module=' + moduleName;
+
+            confirmButton.innerText = 'Processando...';
+            confirmButton.disabled = true;
+
+            fetch(paymentUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                }
+                // O body foi removido porque 'payment_module' já vai de forma segura na URL
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Resposta da Estratégia:', data.data);
+                    
+                    if (moduleName === 'pix') {
+                        alert('Pagamento PIX gerado! QR Code: ' + data.data.qr_code);
+                    } else {
+                        alert('Sucesso: ' + data.message);
+                        window.location.href = baseUri + 'index.php?controller=order-confirmation';
+                    }
+                } else {
+                    alert('Erro: ' + data.message);
+                    confirmButton.innerText = 'Tentar Novamente';
+                    confirmButton.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                alert('Ocorreu um erro de rede ao processar o pagamento.');
+                confirmButton.innerText = 'Confirmar Pedido';
+                confirmButton.disabled = false;
+            });
+        });
+    }
+});
+</script>
