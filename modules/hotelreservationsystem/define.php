@@ -40,6 +40,14 @@ require_once 'classes/HotelOrderRestrictDate.php';
 require_once 'classes/HotelHelper.php';
 require_once 'classes/HotelRoomTypeFeaturePricing.php';
 require_once 'classes/HotelRoomTypeFeaturePricingRestriction.php';
+
+// price calculation chain (Decorator pattern)
+require_once 'classes/HotelRoomTypePriceContext.php';
+require_once 'classes/HotelRoomTypePriceComponent.php';
+require_once 'classes/HotelRoomTypeBasePriceComponent.php';
+require_once 'classes/HotelRoomTypeFeaturePricingComponent.php';
+require_once 'classes/HotelRoomTypeTourismTaxComponent.php';
+require_once 'classes/HotelRoomTypeAutoServicesComponent.php';
 require_once 'classes/ChannelOrderPayment.php';
 
 require_once 'classes/HotelRoomTypeRestrictionDateRange.php';

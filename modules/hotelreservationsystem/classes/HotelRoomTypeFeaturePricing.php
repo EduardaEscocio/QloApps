@@ -284,6 +284,86 @@ class HotelRoomTypeFeaturePricing extends ObjectModel
         $use_reduc = 1,
         $includeTourismTax = false
     ) {
+        $context = new HotelRoomTypePriceContext(
+            $id_product,
+            $date_from,
+            $date_to,
+            $occupancy,
+            $id_group,
+            $id_cart,
+            $id_guest,
+            $id_room,
+            $with_auto_room_services,
+            $use_reduc,
+            $includeTourismTax
+        );
+
+        // Daily phase: every stay day price goes through the decorated chain
+        // (feature pricing plan impact decorating the base per night price).
+        $dayPriceComponent = new HotelRoomTypeFeaturePricingComponent(
+            new HotelRoomTypeBasePriceComponent()
+        );
+        foreach ($context->getStayDates() as $currentDate) {
+            $dayPrice = $dayPriceComponent->getDayPrice($context, $currentDate);
+            $context->addTaxIncl($dayPrice['total_price_tax_incl']);
+            $context->addTaxExcl($dayPrice['total_price_tax_excl']);
+        }
+
+        Hook::exec('actionRoomTypeTotalPriceModifier',
+            array(
+                'total_prices' => &$context->totalPrice,
+                'id_room_type' => $id_product,
+                'id_room' => $id_room,
+                'date_from' => $date_from,
+                'date_to' => $context->date_to,
+                'id_currency' => $context->id_currency,
+                'quantity' => $context->quantity,
+                'id_cart' => $id_cart,
+                'id_guest' => $id_guest,
+                'id_group' => $context->id_group,
+                'use_reduc' => $use_reduc,
+                'tax_rate' => $context->taxRate,
+                'occupancy' => $occupancy
+            )
+        );
+
+        // Stay phase: the accumulated stay total is decorated by the tourism
+        // tax and then by the room services priced with the room.
+        $stayPriceComponent = new HotelRoomTypeAutoServicesComponent(
+            new HotelRoomTypeTourismTaxComponent()
+        );
+        $stayPriceComponent->apply($context);
+
+        if (!$context->quantity) {
+            $context->quantity = 1;
+        }
+        $context->totalPrice['total_price_tax_incl'] = $context->totalPrice['total_price_tax_incl'] * $context->quantity;
+        $context->totalPrice['total_price_tax_excl'] = $context->totalPrice['total_price_tax_excl'] * $context->quantity;
+
+        return $context->getTotalPrice();
+    }
+
+    /**
+     * Legacy copy of the original monolithic implementation of
+     * getRoomTypeTotalPrice(), kept temporarily as the reference
+     * implementation for the characterization test of the Decorator
+     * refactoring. Do not use it in production code.
+     *
+     * @see HotelRoomTypeFeaturePricing::getRoomTypeTotalPrice()
+     */
+    protected static function getRoomTypeTotalPriceLegacy(
+        $id_product,
+        $date_from,
+        $date_to,
+        $occupancy = null,
+        $id_group = 0,
+        $id_cart = 0,
+        $id_guest = 0,
+        $id_room = 0,
+        $with_auto_room_services = 1,
+        $use_reduc = 1,
+        $includeTourismTax = false
+    ) {
         $totalPrice = array();
         $totalPrice['total_price_tax_incl'] = 0;
         $totalPrice['total_price_tax_excl'] = 0;
@@ -383,7 +463,7 @@ class HotelRoomTypeFeaturePricing extends ObjectModel
                 'occupancy' => $occupancy
             )
         );
-        
+
         if ($includeTourismTax && Configuration::get('QLO_USE_TOURISM_TAX') && is_array($occupancy) && !empty($occupancy) && isset($occupancy[0]['adults'])) {
             if ($idTourismTaxRulesGroup = Product::getIdTourismTaxRulesGroupByIdProduct((int) $id_product)) {
                 $hotelBranch = new HotelBranchInformation((int) $objAddress->id_hotel);
