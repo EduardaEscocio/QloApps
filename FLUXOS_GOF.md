@@ -174,31 +174,67 @@ matriz de impacto incide sobre o preço **bruto**; o desconto de grupo é aplica
 por dia; data de check-in igual à de check-out vira 1 noite; o hook dispara
 antes de taxa/serviços.
 
-### 2.4 Roteiro de demonstração
+### 2.4 Roteiro de demonstração (só Front-End)
 
-**Preparação (uma vez):** aplique o fixture com 3 planos de teste —
-`sudo mysql qloapps < tests/fixtures_feature_pricing.sql` (Windows:
-`C:\xampp\mysql\bin\mysql.exe -u root qloapps < tests\fixtures_feature_pricing.sql`).
-Ele cria planos com janelas de datas relativas ao dia atual (idempotente):
+**A ideia em uma frase:** mudar as datas da reserva muda o preço da noite na
+hora — cada janela de datas dispara um plano diferente (desconto %, aumento
+fixo, preço fixado), e é o mesmo código Decorator servindo os três.
 
-| Plano | Impacto | Janela |
+**O que esperar de cada plano** (quarto da demo: General Rooms, 1 quarto,
+2 adultos — a noite **sem plano** custa **$1,250.00** = $1,000.00 de base +
+$250.00 de auto-serviços; o impacto do plano incide sobre a **base** de
+$1,000.00, como documenta a seção 2.3):
+
+| Plano | A noite vira | Janela de datas (relativa ao dia do fixture) |
 |---|---|---|
-| Test Decrease 20% | −20% por noite | hoje+10 a hoje+20 |
-| Test Increase Fixed 100 | +100 por noite | hoje+25 a hoje+35 |
-| Test Fix 500 | fixa o preço em 500 | hoje+40 a hoje+50 |
+| Test Decrease 20% | $1,250.00 → **$1,050.00** | hoje+10 a hoje+20 |
+| Test Increase Fixed 100 | $1,250.00 → **$1,350.00** | hoje+25 a hoje+35 |
+| Test Fix 500 | $1,250.00 → **$750.00** | hoje+40 a hoje+50 |
 
-**Na interface:**
+*(Por isso o riscado parece "menos que 20%": a diferença é 20% da base
+$1,000.00 = $200.00, e não do $1,250.00 exibido.)*
 
-1. Abra a página do quarto **General Rooms** (room type 1, criado pela demo data).
-2. Reserve com check-in/check-out dentro da janela do plano Decrease 20%
-   (ex.: hoje+11 até hoje+14) e 1 quarto, 2 adultos.
-3. No carrinho, o **Total Rooms price** mostra o preço com **−20% por noite**
-   (valor original riscado acima dele) — o plano aplicado pelo Decorador 1.
-4. Troque as datas para as janelas dos outros planos: o total sobe +100/noite
-   (Decorador aplica aumento) ou fixa em 500 — o **mesmo código**, mudando só os
-   dados do plano.
+**Preparação (uma vez, de preferência no dia da demo):** aplique o fixture —
+ele cria os 3 planos com janelas relativas ao dia da execução e é idempotente
+(re-executar recria as janelas já atualizadas):
 
-**Prova de equivalência (linha de comando):**
+```bash
+sudo mysql qloapps < tests/fixtures_feature_pricing.sql                            # Linux
+C:\xampp\mysql\bin\mysql.exe -u root qloapps < tests\fixtures_feature_pricing.sql  # Windows
+```
+
+Confira se o room type é o 1 (General Rooms, criado pela demo data):
+`SELECT id_product FROM qlo_htl_room_type;` — se for outro, ajuste o
+`id_product = 1` dentro do SQL do fixture.
+
+**No site (só cliques, ~5 minutos):**
+
+1. Abra o site e entre na página do quarto **General Rooms**
+   (Home → Our Rooms → General Rooms).
+2. No box de reserva à direita, **clique no campo "Check In - Check Out"** —
+   abre um calendário no mês atual. Dica: role a página até o box ficar no
+   centro da tela antes de abrir o calendário.
+3. Use as **setas ‹ ›** do topo do calendário para chegar ao mês da janela do
+   plano que vai demonstrar e **clique no dia de check-in e depois no de
+   check-out** — qualquer estadia inteira dentro da janela serve (2 noites já
+   mostram o efeito). Exemplo com fixture aplicado em 15/11/2026:
+   Decrease 20% → **26/11 → 29/11**; Increase → **10/12 → 12/12**;
+   Fix 500 → **26/12 → 29/12**.
+4. **Ainda sem reservar, o preço já reage:** o box "Room Price / Total" na
+   própria página do quarto atualiza na hora — confira com a tabela acima.
+   Nos planos Decrease e Fix aparece o **valor original riscado** em vermelho
+   acima do total; no Increase não há riscado (o preço subiu).
+5. Clique **BOOK NOW** e abra o carrinho: na seção **Summary**, o
+   **Total Rooms price** mostra o **valor original riscado** acima do valor
+   com o plano — e o resumo de pagamento (**Total rooms cost**) exibe **o
+   mesmo número** (as duas áreas sempre concordam).
+6. Para mostrar que o **mesmo código** serve os 3 planos: remova o item do
+   carrinho (link **Remove**) e repita os passos 2–5 mudando só as datas —
+   cada janela mostra seu efeito. Como contraste, escolha datas **fora de
+   todas as janelas**: nenhum riscado, preço cheio — sem plano, o Decorador
+   apenas delega ao componente interno.
+
+**Prova de equivalência (opcional, linha de comando):**
 
 ```bash
 php tests/pricing_characterization.php
