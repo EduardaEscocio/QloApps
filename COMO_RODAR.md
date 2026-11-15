@@ -28,6 +28,10 @@ cálculo de preço**.
 > nuvem** (OneDrive/Drive). Durante os testes, o OneDrive causou erros
 > `Smarty: unable to write file` nos caches compilados. Sugestão: `C:\dev\QloApps`.
 
+> As seções 2 a 10 usam **Windows/XAMPP**. Para **Linux Fedora**, pule para a
+> **seção 11** (a partir dela, os comandos substituem os equivalentes do XAMPP;
+> os testes das seções 8 e 9 são os mesmos, mudando só os caminhos dos comandos).
+
 ### 2. Instalar XAMPP e ativar extensões
 
 **2.1 — Instalar** (uma opção via terminal):
@@ -248,3 +252,167 @@ C:\xampp\php\php.exe tests\probe_day_loop.php       # loop dia a dia da implemen
 | "Erro na validação do carrinho" ao pagar | carrinho sem endereço — complete o endereço do cliente (seção 8) |
 | Preços sem efeito dos planos | fixture não aplicado (9.1) ou datas fora das janelas — rode o fixture de novo (ele é idempotente e recalcula as janelas pelo dia atual) |
 | Apache/MySQL não sobem pelo painel | rode `xampp-control.exe` como administrador, ou inicie os binários manualmente (passo 3) |
+
+---
+
+## 11. Versão Linux — Fedora
+
+Equivalente completo das seções 2 a 7 (instalação) e 9.1/9.3 (fixture e harness)
+usando os pacotes nativos do Fedora, sem XAMPP. Os testes das seções 8 e 9.2
+são idênticos — só mudam os comandos de banco e PHP indicados abaixo.
+
+### 11.1 Pré-requisitos (uma linha de dnf)
+
+```bash
+sudo dnf install -y httpd mariadb-server php php-cli php-pdo php-mysqlnd php-gd php-soap php-mbstring php-xml git
+```
+
+Notas importantes sobre o PHP do Fedora:
+
+- As extensões **zip, curl, openssl, fileinfo, phar e dom/simplexml** já vêm
+  habilitadas nos pacotes `php-common`/`php-xml` — **não existe php.ini para
+  descomentar** (cada extensão é um arquivo em `/etc/php.d/`). Confira:
+  `php -m | grep -E 'gd|soap|zip|pdo_mysql|mbstring|curl'`
+- O PHP dos repositórios do Fedora é 8.3+ (dentro da faixa `>=8.2 <8.6`). Em
+  Fedora antigo (< 37), ative o repositório Remi:
+  `sudo dnf install https://rpms.remirepo.net/fedora/remi-release-$(rpm -E %fedora).rpm && sudo dnf module enable php:remi-8.2`
+
+### 11.2 Subir os serviços
+
+```bash
+sudo systemctl enable --now httpd mariadb
+```
+
+Se o firewalld estiver ativo:
+
+```bash
+sudo firewall-cmd --permanent --add-service=http --add-service=https
+sudo firewall-cmd --reload
+```
+
+### 11.3 Banco de dados
+
+No Fedora, o `root` do MariaDB usa autenticação **unix_socket** — o PHP do
+Apache **não** conecta como root sem senha. Crie um usuário dedicado:
+
+```bash
+sudo mysql <<'SQL'
+CREATE DATABASE qloapps CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE USER 'qlo'@'localhost' IDENTIFIED BY 'qlo123';
+GRANT ALL PRIVILEGES ON qloapps.* TO 'qlo'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+```
+
+### 11.4 Clonar dentro do /var/www/html e ajustar SELinux
+
+Clone **dentro de `/var/www/html`** (não dentro de `/home` — o SELinux bloqueia
+leitura do diretório home pelo httpd):
+
+```bash
+cd /var/www/html
+sudo git clone -b feature/decorator-pricing https://github.com/SEU_USUARIO/QloApps.git qloapps
+sudo chown -R $USER:apache qloapps
+git -C qloapps checkout e502b63 -- install-dev   # instalador, igual ao passo 6 do Windows
+```
+
+Dê ao httpd permissão de leitura **e escrita** (o instalador e o site escrevem em
+`cache/`, `config/`, `img/`, `upload/`, `download/`, `log/`, `modules/`). Em
+máquina de estudos, o caminho simples é marcar a pasta inteira como gravável
+pelo httpd:
+
+```bash
+sudo dnf install -y policycoreutils-python-utils   # se 'semanage' não existir
+sudo semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/qloapps(/.*)?"
+sudo restorecon -R /var/www/html/qloapps
+```
+
+*(Isso é adequado para ambiente local de estudos; em produção o correto é
+`httpd_sys_content_t` no geral e `httpd_sys_rw_content_t` apenas nos diretórios
+graváveis.)*
+
+### 11.5 AllowOverride — sem isso as URLs amigáveis quebram
+
+O `httpd` do Fedora vem com `AllowOverride None`, o que faz o QloApps **ignorar
+os `.htaccess`** (URLs amigáveis dão 404). Edite `/etc/httpd/conf/httpd.conf` e,
+no bloco `<Directory "/var/www/html">`, troque `AllowOverride None` por
+`AllowOverride All` — ou, num ambiente só de estudos:
+
+```bash
+sudo sed -i 's/AllowOverride None/AllowOverride All/' /etc/httpd/conf/httpd.conf
+sudo systemctl restart httpd
+```
+
+### 11.6 Instalar o site (instalador web)
+
+Abra **http://localhost/qloapps/install-dev/** e siga a seção 6 do Windows, com
+**uma única diferença** — credenciais do banco (usuário criado em 11.3):
+
+| Campo | Valor |
+|---|---|
+| Database server address | `localhost` |
+| Database name | `qloapps` |
+| Database login | `qlo` |
+| Database password | `qlo123` |
+| Tables prefix | `qlo_` |
+
+Todo o resto é igual (demo data **YES**, conta admin, etc.). Ao finalizar,
+remova o instalador:
+
+```bash
+git -C /var/www/html/qloapps reset -- install-dev
+sudo rm -rf /var/www/html/qloapps/install-dev
+```
+
+E limpe os caches se necessário:
+
+```bash
+rm -f /var/www/html/qloapps/cache/class_index.php
+rm -rf /var/www/html/qloapps/cache/smarty/compile/* /var/www/html/qloapps/cache/smarty/cache/*
+```
+
+### 11.7 Testar a parte da Maria Eduarda (Strategy)
+
+**Idêntico à seção 8** — o fluxo é pela interface do site (não depende do
+sistema operacional). Para verificar as rotas da factory pelo terminal, com o
+cookie de sessão de um carrinho ativo:
+
+```bash
+curl -s -b "cookie_qloapps=<valor_do_cookie>" \
+  "http://localhost/qloapps/index.php?controller=PaymentProcessor&ajax=true&payment_module=pix" \
+  -X POST -H "Accept: application/json"
+# → {"success":true,"data":{"status":"pending","message":"QR Code PIX gerado","qr_code":"000201..."}}
+```
+
+*(o caminho mais fácil continua sendo o console do navegador na página do site —
+veja o snippet JavaScript na seção 8).*
+
+### 11.8 Testar a sua parte (Decorator)
+
+```bash
+# fixture dos planos de preço (idempotente, janelas relativas ao dia atual)
+sudo mysql qloapps < /var/www/html/qloapps/tests/fixtures_feature_pricing.sql
+
+# harness de caracterização (esperado: 13/13 PASS)
+php /var/www/html/qloapps/tests/pricing_characterization.php
+
+# probes de diagnóstico (opcionais)
+php /var/www/html/qloapps/tests/probe_cart_pricing.php
+php /var/www/html/qloapps/tests/probe_matrix.php
+```
+
+A conferência pela interface é igual à **seção 9.2** (abrir
+http://localhost/qloapps/ → Rooms → General Rooms → reservar datas dentro das
+janelas dos planos e comparar os totais do carrinho).
+
+### 11.9 Problemas comuns no Fedora
+
+| Sintoma | Causa / Solução |
+|---|---|
+| 403 / Permission denied no site inteiro | SELinux bloqueando — re-aplique o contexto (11.4) e veja `sudo ausearch -m avc -ts recent` |
+| URLs amigáveis dão 404 (só a home abre) | `AllowOverride All` não aplicado — refaça 11.5 e reinicie o httpd |
+| Instalador não grava `config/settings.inc.php` | contexto SELinux sem escrita — 11.4 |
+| Instalador não conecta no banco | usuário errado — no Fedora **não** é root sem senha (11.3) |
+| Fatais do PHP não aparecem na tela | `display_errors` vem Off — veja `sudo tail -f /var/log/httpd/error_log` |
+| Servidor trocado (nginx/php-fpm etc.) | este guia cobre httpd + mod_php; outros setups exigem ajustes próprios de fpm/SELinux |
+| Erros de cache do Smarty | limpe `cache/smarty/compile` e `cache/smarty/cache` (11.6) |
