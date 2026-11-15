@@ -77,8 +77,13 @@
 		<!-- <link href='https://fonts.googleapis.com/css?family=PT+Serif:400,400italic,700,700italic' rel='stylesheet' type='text/css'> -->
 		<link href='//fonts.googleapis.com/css?family=Oxygen:400,300,700' rel='stylesheet' type='text/css'>
 	</head>
-	<!-- Built with QloApps -->
+<!-- Built with QloApps -->
 	<body{if isset($page_name)} id="{$page_name|escape:'html':'UTF-8'}"{/if} class="qloapps {if isset($page_name)}{$page_name|escape:'html':'UTF-8'}{/if}{if isset($body_classes) && $body_classes|@count} {' '|implode:$body_classes}{/if}{if $hide_left_column} hide-left-column{else} show-left-column{/if}{if $hide_right_column} hide-right-column{else} hide-right-column{/if}{if isset($content_only) && $content_only} content_only{/if} lang_{$lang_iso}" style="{if $page_name == 'index'}height: 100%;{/if}">
+
+	<div style="background: #e11d48; color: #ffffff; font-size: 20px; font-weight: bold; text-align: center; padding: 18px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999999; box-shadow: 0 4px 12px rgba(0,0,0,0.4); text-transform: uppercase; letter-spacing: 1px;">
+	  Essa é a Demo teste para o trabalho de PDS
+	</div>
+	
 	{if !isset($content_only) || !$content_only}
 		{if isset($restricted_country_mode) && $restricted_country_mode}
 			<div id="restricted-country">
