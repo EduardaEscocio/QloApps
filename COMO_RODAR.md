@@ -246,6 +246,7 @@ C:\xampp\php\php.exe tests\probe_day_loop.php       # loop dia a dia da implemen
 
 | Sintoma | Causa / Solução |
 |---|---|
+| Site não abre após reiniciar o PC | o XAMPP não sobe junto com o Windows — abra o `C:\xampp\xampp-control.exe` e clique **Start** no **Apache** e no **MySQL**; para não precisar repetir isso toda vez, marque a caixinha à esquerda de cada um (instala como serviço do Windows e sobe no boot) |
 | Porta 80 ou 3306 ocupada | outro Apache/MySQL rodando — pare o serviço ou troque a porta |
 | `Smarty: unable to write file ...` | pasta do clone dentro de OneDrive/Drive — mova para fora da sincronização |
 | Classes novas não encontradas (Decorator) | apague `cache/class_index.php` e recarregue |
@@ -410,6 +411,7 @@ janelas dos planos e comparar os totais do carrinho).
 
 | Sintoma | Causa / Solução |
 |---|---|
+| Site não abre após reiniciar o PC (navegador diz "não foi possível conectar") | httpd/MariaDB não sobem com o sistema — rode `sudo systemctl enable --now httpd mariadb` (o `enable --now` sobe agora **e** garante o boot automático das próximas vezes; veja 11.2) |
 | 403 / Permission denied no site inteiro | SELinux bloqueando — re-aplique o contexto (11.4) e veja `sudo ausearch -m avc -ts recent` |
 | URLs amigáveis dão 404 (só a home abre) | `AllowOverride All` não aplicado — refaça 11.5 e reinicie o httpd |
 | Instalador não grava `config/settings.inc.php` | contexto SELinux sem escrita — 11.4 |
