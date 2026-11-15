@@ -54,6 +54,11 @@ class HotelRoomTypeFeaturePricingComponent extends HotelRoomTypePriceComponent
      */
     public function getDayPrice(HotelRoomTypePriceContext $context, $currentDate)
     {
+        // The plan lookup matches the customer group, so the shared context data
+        // (raw id_group 0 resolved to the current group id and base prices) must
+        // be loaded BEFORE the first lookup. initBasePriceData() is idempotent.
+        $context->initBasePriceData();
+
         if ($context->use_reduc && ($featurePrice = HotelCartBookingData::getProductFeaturePricePlanByDateByPriority(
             $context->id_product,
             $currentDate,

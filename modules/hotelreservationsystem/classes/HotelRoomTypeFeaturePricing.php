@@ -300,6 +300,9 @@ class HotelRoomTypeFeaturePricing extends ObjectModel
 
         // Daily phase: every stay day price goes through the decorated chain
         // (feature pricing plan impact decorating the base per night price).
+        // The shared context (customer group, base prices) is initialized before
+        // the chain runs so the per day plan lookups match the resolved group.
+        $context->initBasePriceData();
         $dayPriceComponent = new HotelRoomTypeFeaturePricingComponent(
             new HotelRoomTypeBasePriceComponent()
         );
