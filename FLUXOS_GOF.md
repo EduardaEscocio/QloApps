@@ -46,7 +46,8 @@ a escolha do usuário.
         │        &ajax=true&payment_module=pix
         ▼
 [2] PaymentProcessorController::postProcess()
-    valida carrinho (id, id_customer, id_address_invoice)
+    valida carrinho (id, id_customer) — o checkout do QloApps não coleta
+    endereço do hóspede, e as estratégias (stubs) não o utilizam
     calcula o valor: $cart->getOrderTotal(true, Cart::BOTH)
         │
         ▼

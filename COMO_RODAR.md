@@ -168,10 +168,11 @@ fetch('index.php?controller=PaymentProcessor&ajax=true&payment_module=pix', {met
 `controllers/front/PaymentProcessorController.php` e os templates
 `themes/hotel-reservation-theme/order-payment.tpl` + `header.tpl`.
 
-**Se aparecer "Erro na validação do carrinho":** o controller exige que o carrinho
-tenha endereço (`id_address_invoice != 0`). Isso é normal quando o fluxo pulou a
-etapa de endereço — complete o endereço do cliente no checkout completo
-(`index.php?controller=order`) ou cadastre pelo back office.
+**Nota sobre a validação do carrinho:** o controller exige apenas carrinho ativo
+e cliente logado/criado (`id_customer != 0`) — o checkout padrão do QloApps não
+coleta endereço do hóspede, então **não** há exigência de endereço
+(`id_address_invoice`). Se aparecer "Erro na validação do carrinho", basta
+preencher o Guest Information antes de chegar à etapa de pagamento.
 
 ---
 
@@ -249,7 +250,7 @@ C:\xampp\php\php.exe tests\probe_day_loop.php       # loop dia a dia da implemen
 | `Smarty: unable to write file ...` | pasta do clone dentro de OneDrive/Drive — mova para fora da sincronização |
 | Classes novas não encontradas (Decorator) | apague `cache/class_index.php` e recarregue |
 | Site pede para deletar a pasta `install` | instale e renomeie/remova `install-dev` (passo 6) |
-| "Erro na validação do carrinho" ao pagar | carrinho sem endereço — complete o endereço do cliente (seção 8) |
+| "Erro na validação do carrinho" ao pagar | carrinho sem cliente — preencha o Guest Information antes de pagar (seção 8) |
 | Preços sem efeito dos planos | fixture não aplicado (9.1) ou datas fora das janelas — rode o fixture de novo (ele é idempotente e recalcula as janelas pelo dia atual) |
 | Apache/MySQL não sobem pelo painel | rode `xampp-control.exe` como administrador, ou inicie os binários manualmente (passo 3) |
 

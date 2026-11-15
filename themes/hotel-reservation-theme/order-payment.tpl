@@ -75,8 +75,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const moduleName = selectedPayment.value; 
             
-            // CORREÇÃO: Forçamos o index.php e passamos o módulo diretamente na URL para evitar perda de dados em redirecionamentos
-            const paymentUrl = baseUri + 'index.php?controller=PaymentProcessor&ajax=true&payment_module=' + moduleName;
+            // baseUri já inclui 'index.php' quando as URLs amigáveis estão desligadas
+            // (FrontController::$base_uri), então o controller é anexado com '?' —
+            // mesmo padrão usado por todos os JS do tema (order-address.js, ajax-cart.js, etc.)
+            const paymentUrl = baseUri + '?controller=PaymentProcessor&ajax=true&payment_module=' + moduleName;
 
             confirmButton.innerText = 'Processando...';
             confirmButton.disabled = true;
@@ -97,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Pagamento PIX gerado! QR Code: ' + data.data.qr_code);
                     } else {
                         alert('Sucesso: ' + data.message);
-                        window.location.href = baseUri + 'index.php?controller=order-confirmation';
+                        window.location.href = baseUri + '?controller=order-confirmation';
                     }
                 } else {
                     alert('Erro: ' + data.message);

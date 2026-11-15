@@ -36,9 +36,12 @@ class PaymentProcessorControllerCore extends FrontController
         }
 
         // 3. Valida o carrinho e o cliente
+        // OBS.: não exigimos endereço (id_address_invoice) porque o checkout padrão
+        // do QloApps (hotelaria) não coleta endereço do hóspede, e as estratégias
+        // abaixo são stubs que não o utilizam.
         $cart = $this->context->cart;
-        
-        if (!$cart->id || $cart->id_customer == 0 || $cart->id_address_invoice == 0) {
+
+        if (!$cart->id || $cart->id_customer == 0) {
             $this->ajaxDie(json_encode([
                 'success' => false,
                 'message' => 'Erro na validação do carrinho. Tente recarregar a página.'
