@@ -20,9 +20,6 @@ require_once $corePath . 'Strategy/PixPaymentStrategy.php';
 require_once $corePath . 'Strategy/OfflinePaymentStrategy.php';
 
 class PaymentProcessorControllerCore extends FrontController
-// ... resto do código permanece igual
-
-class PaymentProcessorControllerCore extends FrontController
 {
     public $ssl = true;
 
